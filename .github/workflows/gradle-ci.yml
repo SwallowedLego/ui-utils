@@ -1,0 +1,56 @@
+name: Gradle CI (Java 17)
+
+on:
+  push:
+    branches:
+      - main
+      - 'copilot/**'
+      - 'upgrade/**'
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17 (Temurin)
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+          cache: 'gradle'
+
+      - name: Cache Gradle dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
+      - name: Make gradlew executable
+        run: chmod +x ./gradlew
+
+      - name: Build (clean + build)
+        run: ./gradlew --no-daemon clean build --info
+        # If you want less logging use --quiet; use --refresh-dependencies if you need to force re-download.
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ui-utils-build
+          path: build/libs/**
+
+      - name: Archive Gradle build cache (optional)
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: gradle-cache-logs
+          path: build/reports/**, build/logs/**
