@@ -1,4 +1,4 @@
-name: Gradle CI (Java 17)
+name: Gradle CI (Java 21) - with logs
 
 on:
   push:
@@ -18,11 +18,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up JDK 17 (Temurin)
+      - name: Set up JDK 21 (Temurin)
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
-          java-version: '17'
+          java-version: '21'
           cache: 'gradle'
 
       - name: Cache Gradle dependencies
@@ -38,19 +38,21 @@ jobs:
       - name: Make gradlew executable
         run: chmod +x ./gradlew
 
-      - name: Build (clean + build)
-        run: ./gradlew --no-daemon clean build --info
-        # If you want less logging use --quiet; use --refresh-dependencies if you need to force re-download.
+      - name: Run Gradle build and capture logs
+        run: |
+          mkdir -p build/logs
+          ./gradlew --no-daemon clean build --info --stacktrace 2>&1 | tee build/logs/gradle-output.log
 
       - name: Upload build artifacts
+        if: success()
         uses: actions/upload-artifact@v4
         with:
           name: ui-utils-build
           path: build/libs/**
 
-      - name: Archive Gradle build cache (optional)
-        if: ${{ always() }}
+      - name: Upload Gradle logs (always)
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: gradle-cache-logs
-          path: build/reports/**, build/logs/**
+          name: gradle-logs
+          path: build/logs/gradle-output.log
